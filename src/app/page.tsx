@@ -1,65 +1,100 @@
-import Image from "next/image";
+'use client'; // Wajib buat component yang pake state
 
-export default function Home() {
+import React, { useState } from 'react';
+import Layout from '../components/Layout';
+import TokenCard from '../components/TokenCard';
+import WalletModal from '../components/WalletModal';
+import AdvancedFilterModal from '../components/AdvancedFilterModal';
+import CreateTokenForm from '../components/CreateTokenForm';
+
+// Data dummy buat ngetes Grid Token
+const dummyTokens = [
+  { id: '1', name: 'Apple', ticker: 'APPLE', mcap: '$2.48M', change: '+0.1%', image: 'https://images.unsplash.com/photo-1594913217700-112df7183e4f?q=80&w=600&auto=format&fit=crop' },
+  { id: '2', name: 'Al Coach Rudi', ticker: 'RUDI', mcap: '$677K', change: '-1.2%', image: 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop' },
+  { id: '3', name: 'TROLL', ticker: 'TROLL', mcap: '$53.7M', change: '+5.4%', image: 'https://images.unsplash.com/photo-1594913217700-112df7183e4f?q=80&w=600&auto=format&fit=crop' },
+  { id: '4', name: 'GoblinCoin', ticker: 'Goblin', mcap: '$4.46M', change: '+2.0%', image: 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop' },
+  // Tambah data lain sesuai kebutuhan...
+];
+
+// Data kategori filter
+const filterCategories = ['Movers', 'Charities', 'Mayhem', 'Live', 'New', 'Oldest', 'Last trade'];
+
+export default function PumpCloneMVPage() {
+  // --- STATE UTAMA ---
+  const [activeView, setActiveView] = useState<'home' | 'create'>('home'); // Nentuin mau nampilin halaman depan atau form create
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false); // Buka/tutup modal konek dompet
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false); // Buka/tutup modal filter Mcap/Vol
+  const [selectedCategory, setSelectedCategory] = useState('New'); // Kategori filter yang dipilih
+
+  // Placeholder buat wallet status
+  const [walletStatus, setWalletStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <Layout 
+      setActiveView={setActiveView} 
+      activeView={activeView}
+      setIsWalletModalOpen={setIsWalletModalOpen}
+      walletStatus={walletStatus}
+      walletAddress={walletAddress}
+    >
+      {/* --- KONDISIONAL RENDER AREA KONTEN UTAMA --- */}
+      {activeView === 'home' && (
+        <main className="p-8">
+          {/* Header Kategori Filter */}
+          <div className="mb-6 flex items-center justify-between border-b border-white/20 pb-4">
+            <h2 className="text-xl font-bold font-mono tracking-tighter">
+              EXPLORE COINS
+            </h2>
+            <div className="flex items-center gap-3">
+              {filterCategories.map(cat => (
+                <button 
+                  key={cat} 
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-1.5 border font-mono text-sm transition-colors ${selectedCategory === cat ? 'bg-white text-black border-white' : 'border-white/20 text-neutral-400 hover:text-white hover:border-white'}`}
+                >
+                  [{cat.toUpperCase()}]
+                </button>
+              ))}
+              {/* Tombol buat buka modal Advanced Filter */}
+              <button 
+                onClick={() => setIsAdvancedFilterOpen(true)}
+                className="p-2 border border-white/20 hover:border-white transition-colors"
+              >
+                <FilterIcon />
+              </button>
+            </div>
+          </div>
+
+          {/* Grid buat Card Token */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+             {dummyTokens.map(token => (
+                <TokenCard key={token.id} {...token} />
+             ))}
+          </div>
+        </main>
+      )}
+
+      {activeView === 'create' && (
+        <CreateTokenForm />
+      )}
+
+      {/* --- MODAL AREA --- */}
+      <WalletModal 
+        isOpen={isWalletModalOpen} 
+        onClose={() => setIsWalletModalOpen(false)} 
+        setWalletStatus={setWalletStatus}
+        setWalletAddress={setWalletAddress}
+      />
+      <AdvancedFilterModal 
+        isOpen={isAdvancedFilterOpen} 
+        onClose={() => setIsAdvancedFilterOpen(false)} 
+      />
+    </Layout>
   );
+}
+
+// Icon buatan buat Filter
+function FilterIcon() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" className="text-neutral-500 hover:text-white transition"><path d="M4 6h16M7 12h10M10 18h4"/></svg>;
 }
