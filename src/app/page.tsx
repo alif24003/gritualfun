@@ -1,49 +1,155 @@
-'use client'; // Wajib buat component yang pake state
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// 👇 1. IMPORT formatEther DARI VIEM BUAT NGITUNG MCAP
+import { formatEther } from 'viem'; 
+import { useAccount, useReadContract } from 'wagmi'; 
 import Layout from '../components/Layout';
 import TokenCard from '../components/TokenCard';
 import WalletModal from '../components/WalletModal';
 import AdvancedFilterModal from '../components/AdvancedFilterModal';
 import CreateTokenForm from '../components/CreateTokenForm';
+import ProfileModal from '../components/ProfileModal';
 
-// Data dummy buat ngetes Grid Token
-const dummyTokens = [
-  { id: '1', name: 'Apple', ticker: 'APPLE', mcap: '$2.48M', change: '+0.1%', image: 'https://images.unsplash.com/photo-1594913217700-112df7183e4f?q=80&w=600&auto=format&fit=crop' },
-  { id: '2', name: 'Al Coach Rudi', ticker: 'RUDI', mcap: '$677K', change: '-1.2%', image: 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop' },
-  { id: '3', name: 'TROLL', ticker: 'TROLL', mcap: '$53.7M', change: '+5.4%', image: 'https://images.unsplash.com/photo-1594913217700-112df7183e4f?q=80&w=600&auto=format&fit=crop' },
-  { id: '4', name: 'GoblinCoin', ticker: 'Goblin', mcap: '$4.46M', change: '+2.0%', image: 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop' },
-  // Tambah data lain sesuai kebutuhan...
-];
 
-// Data kategori filter
-const filterCategories = ['Movers', 'Charities', 'Mayhem', 'Live', 'New', 'Oldest', 'Last trade'];
+import FactoryJSON from '../abis/GritualFactory.json';
+
+const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as `0x${string}`;
+
+const filterCategories = ['Movers', 'New', 'Oldest', 'Last trade'];
 
 export default function PumpCloneMVPage() {
   // --- STATE UTAMA ---
-  const [activeView, setActiveView] = useState<'home' | 'create'>('home'); // Nentuin mau nampilin halaman depan atau form create
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false); // Buka/tutup modal konek dompet
-  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false); // Buka/tutup modal filter Mcap/Vol
-  const [selectedCategory, setSelectedCategory] = useState('New'); // Kategori filter yang dipilih
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  const [activeView, setActiveView] = useState<'home' | 'create' | 'leaderboard'>('home'); 
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false); 
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); 
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false); 
+  const [selectedCategory, setSelectedCategory] = useState('New'); 
+  
+  // --- STATE BUAT SEARCH & ADVANCED FILTER ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minMcap, setMinMcap] = useState('');
+  const [maxMcap, setMaxMcap] = useState('');
+  const [minVol, setMinVol] = useState(''); 
+  const [maxVol, setMaxVol] = useState('');
 
-  // Placeholder buat wallet status
-  const [walletStatus, setWalletStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const { address, status } = useAccount();
 
+  const { data: blockchainTokens, isLoading: isLoadingTokens } = useReadContract({
+    address: FACTORY_ADDRESS,
+    abi: FactoryJSON.abi,
+    functionName: 'getAllTokens',
+  });
+
+  const mappedStatus = (
+    status === 'connected' ? 'connected' : 
+    (status === 'connecting' || status === 'reconnecting') ? 'connecting' : 'disconnected'
+  ) as 'disconnected' | 'connecting' | 'connected';
+
+  // 1. MAPPING DATA
+  let allTokens = blockchainTokens ? (blockchainTokens as any[]).map((t: any, index: number) => {
+    let imageUrl = 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop';
+    
+    if (t.image && t.image.startsWith('ipfs://')) {
+      // Pake gateway dweb.link biar lebih kenceng dan jarang kena blokir
+      imageUrl = t.image.replace('ipfs://', 'https://dweb.link/ipfs/'); 
+    }
+
+    // 👇 2. RUMUS MCAP LIVE DARI SMART CONTRACT
+    const TOTAL_SUPPLY = 1_000_000_000_000;
+    const rReserve = t.ritualReserve ? Number(formatEther(t.ritualReserve)) : 0;
+    const tReserve = t.tokenReserve ? Number(formatEther(t.tokenReserve)) : 0;
+    const currentPrice = tReserve > 0 ? rReserve / tReserve : 0;
+    const currentMcap = (currentPrice * TOTAL_SUPPLY).toFixed(2);
+
+    return {
+      id: t.tokenAddress || index.toString(),
+      name: t.name || 'Unknown Ritual',
+      ticker: t.symbol || '???',
+      description: t.description || 'Zero pixels, pure character.', 
+      mcap: `${currentMcap} RITUAL`, // 👈 3. DATA MCAP MASUK KE SINI
+      change: '0%',
+      image: imageUrl, 
+      creator: t.creator 
+    };
+  }) : [];
+
+  // 2. LOGIC FILTERING & SORTING SEBELUM DI-RENDER
+
+  // A. Search Berdasarkan Nama atau Ticker
+  if (searchQuery) {
+    allTokens = allTokens.filter(t => 
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.ticker.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }
+
+  // B. Sorting berdasarkan Kategori (New, Oldest)
+  if (selectedCategory === 'New') {
+    allTokens = [...allTokens].reverse();
+  } else if (selectedCategory === 'Oldest') {
+    // Biarkan apa adanya (karena default dari blockchain itu oldest first)
+  } else if (selectedCategory === 'Movers' || selectedCategory === 'Last trade') {
+    allTokens = [...allTokens].reverse(); 
+  }
+
+  // C. Filter berdasarkan Market Cap DAN 24H Volume
+  const parseFilterValue = (val: string) => {
+    if (!val) return null;
+    const cleanVal = val.toLowerCase().replace(/[^0-9km.]/g, ''); 
+    if (cleanVal.endsWith('k')) return parseFloat(cleanVal) * 1000;
+    if (cleanVal.endsWith('m')) return parseFloat(cleanVal) * 1000000;
+    return parseFloat(cleanVal) || 0;
+  };
+
+  const minMcapVal = parseFilterValue(minMcap);
+  const maxMcapVal = parseFilterValue(maxMcap);
+  const minVolVal = parseFilterValue(minVol);
+  const maxVolVal = parseFilterValue(maxVol);
+
+  // Jalankan filter kalau user ngisi salah satu input di Modal
+  if (minMcapVal !== null || maxMcapVal !== null || minVolVal !== null || maxVolVal !== null) {
+    allTokens = allTokens.filter(t => {
+      // Data dummy sementara: mcap diambil dari string, vol dianggap 0
+      const currentMcap = parseFloat(t.mcap.split(' ')[0]) || 0; 
+      const currentVol = 0; // Nanti diganti jadi t.volume24h kalau kontraknya udah ngirim data volume
+      
+      const isAboveMinMcap = minMcapVal !== null ? currentMcap >= minMcapVal : true;
+      const isBelowMaxMcap = maxMcapVal !== null ? currentMcap <= maxMcapVal : true;
+
+      const isAboveMinVol = minVolVal !== null ? currentVol >= minVolVal : true;
+      const isBelowMaxVol = maxVolVal !== null ? currentVol <= maxVolVal : true;
+      
+      return isAboveMinMcap && isBelowMaxMcap && isAboveMinVol && isBelowMaxVol;
+    });
+  }
+
+  // Filter khusus token milik user yang sedang login (buat di profil)
+  const myTokens = allTokens.filter(t => 
+    t.creator?.toLowerCase() === address?.toLowerCase()
+  );
+
+  if (!isMounted) return <div className="min-h-screen bg-black" />;
+    
   return (
     <Layout 
       setActiveView={setActiveView} 
       activeView={activeView}
       setIsWalletModalOpen={setIsWalletModalOpen}
-      walletStatus={walletStatus}
-      walletAddress={walletAddress}
+      setIsProfileModalOpen={setIsProfileModalOpen}
+      walletStatus={mappedStatus} 
+      walletAddress={address || null}
+      searchQuery={searchQuery}         
+      setSearchQuery={setSearchQuery}   
     >
-      {/* --- KONDISIONAL RENDER AREA KONTEN UTAMA --- */}
       {activeView === 'home' && (
         <main className="p-8">
-          {/* Header Kategori Filter */}
           <div className="mb-6 flex items-center justify-between border-b border-white/20 pb-4">
-            <h2 className="text-xl font-bold font-mono tracking-tighter">
+            <h2 className="text-xl font-bold font-mono tracking-tighter text-white">
               EXPLORE COINS
             </h2>
             <div className="flex items-center gap-3">
@@ -56,7 +162,6 @@ export default function PumpCloneMVPage() {
                   [{cat.toUpperCase()}]
                 </button>
               ))}
-              {/* Tombol buat buka modal Advanced Filter */}
               <button 
                 onClick={() => setIsAdvancedFilterOpen(true)}
                 className="p-2 border border-white/20 hover:border-white transition-colors"
@@ -66,11 +171,20 @@ export default function PumpCloneMVPage() {
             </div>
           </div>
 
-          {/* Grid buat Card Token */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-             {dummyTokens.map(token => (
+            {isLoadingTokens ? (
+              <div className="col-span-full py-20 text-center font-mono text-neutral-500 animate-pulse">
+                [ SCANNING RITUAL NETWORK... ]
+              </div>
+            ) : allTokens.length > 0 ? (
+              allTokens.map((token) => (
                 <TokenCard key={token.id} {...token} />
-             ))}
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center font-mono text-neutral-600">
+                [ NO TOKENS FOUND MATCHING CRITERIA ]
+              </div>
+            )}
           </div>
         </main>
       )}
@@ -79,22 +193,91 @@ export default function PumpCloneMVPage() {
         <CreateTokenForm />
       )}
 
-      {/* --- MODAL AREA --- */}
+      {activeView === 'leaderboard' && (
+        <main className="p-8">
+            <div className="border-b border-white/20 pb-4 mb-6">
+                <h2 className="text-2xl font-black tracking-tighter uppercase text-white">
+                  [ TOP RITUALS LEADERBOARD ]
+                </h2>
+                <p className="text-neutral-500 text-sm mt-2">Ranked by Highest Market Cap.</p>
+            </div>
+
+            <div className="space-y-4">
+              {isLoadingTokens ? (
+                <div className="py-20 text-center font-mono text-neutral-500 animate-pulse">
+                  [ SCANNING RITUAL NETWORK... ]
+                </div>
+              ) : allTokens.length > 0 ? (
+                // Logic urutin dari MCAP tertinggi (descending)
+                [...allTokens]
+                  .sort((a, b) => parseFloat(b.mcap.split(' ')[0]) - parseFloat(a.mcap.split(' ')[0]))
+                  .map((token, index) => (
+                    <div key={token.id} className="flex items-center gap-6 p-4 border border-white/10 bg-neutral-950 hover:border-white/50 transition cursor-pointer">
+                      <div className="text-2xl font-black text-neutral-700 w-10">#{index + 1}</div>
+                      
+                      <img 
+                        src={token.image} 
+                        alt={token.name} 
+                        className="w-16 h-16 object-cover border border-white/10" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop';
+                        }}
+                      />
+                      
+                      <div className="flex-1">
+                        <h3 className="font-bold text-white uppercase text-lg leading-tight">
+                          {token.name} <span className="text-neutral-500">[{token.ticker}]</span>
+                        </h3>
+                        <p className="text-xs text-neutral-500 line-clamp-1 mt-1">
+                          {token.description}
+                        </p>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="font-mono text-xl font-black text-white">{token.mcap}</div>
+                        <div className="text-[10px] text-green-500 border border-green-900 bg-green-950/30 px-2 py-0.5 mt-1 inline-block">
+                          Vol 24H: 0.00 RITUAL
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="py-20 text-center font-mono text-neutral-600 border border-dashed border-white/10">
+                  [ NO RITUALS TO RANK YET ]
+                </div>
+              )}
+            </div>
+        </main>
+      )}
+
       <WalletModal 
         isOpen={isWalletModalOpen} 
         onClose={() => setIsWalletModalOpen(false)} 
-        setWalletStatus={setWalletStatus}
-        setWalletAddress={setWalletAddress}
+        setWalletStatus={() => {}}
+        setWalletAddress={() => {}}
       />
+      
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        address={address}
+        userTokens={myTokens} 
+      />
+
       <AdvancedFilterModal 
         isOpen={isAdvancedFilterOpen} 
         onClose={() => setIsAdvancedFilterOpen(false)} 
+        onApply={(filters) => {
+          setMinMcap(filters.minMcap);
+          setMaxMcap(filters.maxMcap);
+          setMinVol(filters.minVol);
+          setMaxVol(filters.maxVol);
+        }}
       />
     </Layout>
   );
 }
 
-// Icon buatan buat Filter
 function FilterIcon() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" className="text-neutral-500 hover:text-white transition"><path d="M4 6h16M7 12h10M10 18h4"/></svg>;
 }
