@@ -116,7 +116,7 @@ export default function TokenDetailPage() {
     name: (rawTokenData as any)[1] || 'Unknown Ritual',
     ticker: (rawTokenData as any)[2] || '???',
     description: (rawTokenData as any)[3] || 'Zero pixels, pure character.',
-    image: (rawTokenData as any)[4] ? (rawTokenData as any)[4].replace('ipfs://', 'https://dweb.link/ipfs/') : 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop',
+    image: (rawTokenData as any)[4] ? (rawTokenData as any)[4].replace('ipfs://', 'https://coffee-casual-cricket-437.mypinata.cloud/ipfs/') : 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop',
     creator: (rawTokenData as any)[5] || '0x0000...0000',
     mcap: displayMcap 
   } : null;

@@ -55,8 +55,8 @@ export default function PumpCloneMVPage() {
     let imageUrl = 'https://images.unsplash.com/photo-1618641986557-1ecd230959aa?q=80&w=600&auto=format&fit=crop';
     
     if (t.image && t.image.startsWith('ipfs://')) {
-      // Pake gateway dweb.link biar lebih kenceng dan jarang kena blokir
-      imageUrl = t.image.replace('ipfs://', 'https://dweb.link/ipfs/'); 
+      // Pake Dedicated Gateway Pinata lu biar INSTAN!
+      imageUrl = t.image.replace('ipfs://', 'https://coffee-casual-cricket-437.mypinata.cloud/ipfs/'); 
     }
 
     // 👇 2. RUMUS MCAP LIVE DARI SMART CONTRACT
