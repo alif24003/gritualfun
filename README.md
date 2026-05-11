@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GRITUAL.FUN
 
-## Getting Started
+> **The Premier Meme Token Launchpad on Ritual Network Testnet.**
 
-First, run the development server:
+**Live Demo:** [gritual.app](https://gritual.app)
+
+Gritual.fun is a decentralized application (dApp) built on the Ritual Network Testnet. It's allows any user to deploy, buy, and sell meme tokens instantly without needing to provide initial seed liquidity.
+
+Price discovery is driven by an automated **Bonding Curve AMM**, ensuring fair launches and instant liquidity.
+
+---
+
+## Key Features
+
+* **Instant Token Creation:** Deploy a standard ERC-20 meme token in seconds with just a name, ticker, and image.
+* **Bonding Curve AMM:** Predictable price discovery. Once the token hits a market cap of **50 RITUAL**, the bonding curve is completed.
+* **Auto-Payout Creator Royalties:** Creators earn a **0.5% fee** on every single trade (Buy/Sell). Payouts are transferred instantly and automatically to the creator's wallet—no manual claiming required.
+* **Live On-Chain Multiplayer:** Real-time transaction history and holder distribution powered by live blockchain event listeners (Zero-refresh UX).
+* **Advanced Filtering:** Sort and search tokens by Newest, Market Cap, 24H Volume, and Movers.
+* **Degen-Ready Mobile UI:** Fully responsive design, allowing users to trade seamlessly on desktop or mobile.
+
+---
+
+## Tech Stack
+
+**Frontend:**
+
+* [Next.js](https://nextjs.org/) (App Router) - React Framework
+* [Tailwind CSS](https://tailwindcss.com/) - Utility-first styling for that sleek, dark terminal vibe
+* [Wagmi](https://wagmi.sh/) & [Viem](https://viem.sh/) - Type-safe Web3 hooks and Ethereum interactions
+* [Lightweight Charts](https://tradingview.github.io/lightweight-charts/) - High-performance financial charts by TradingView
+
+**Smart Contracts:**
+
+* [Solidity](https://soliditylang.org/) `^0.8.20`
+* [OpenZeppelin](https://openzeppelin.com/) (ERC20 & ReentrancyGuard)
+* Deployed on **Ritual Network Testnet (CratD2C)**
+
+---
+
+## Local Development
+
+Want to run Gritual.fun locally? Follow these steps:
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/YOUR_GITHUB_USERNAME/gritual-fun.git
+cd gritual-fun
+
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+# or
+yarn install
+
+```
+
+### 3. Setup Environment Variables
+
+Create a `.env.local` file in the root directory and add your deployed Factory Contract address:
+
+```env
+NEXT_PUBLIC_FACTORY_ADDRESS=0xYourDeployedFactoryContractAddressHere
+NEXT_PUBLIC_PINATA_JWT=YourPinataJWTAPI
+
+```
+
+### 4. Run the development server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Smart Contract Architecture
 
-## Learn More
+The protocol consists of two main components:
 
-To learn more about Next.js, take a look at the following resources:
+1. **`MemeToken.sol`**: A standard ERC-20 contract that mints the total supply (1 Trillion) to the Factory upon creation.
+2. **`GritualFactory.sol`**: The core engine. It acts as the deployer, the automated market maker (via bonding curve math `x * y = k` approximation), and the automated fee distributor.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Disclaimer
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is built for educational purposes and operates on the Ritual Testnet. It involves experimental smart contracts. Do not use real funds.
