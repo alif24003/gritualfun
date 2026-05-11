@@ -5,6 +5,7 @@ import { ImagePlus, Info, Check } from 'lucide-react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 
 import FactoryJSON from '../abis/GritualFactory.json';
+import { parseEther } from 'viem';
 
 // 🚨 PENTING: GANTI PAKE ALAMAT KONTRAK LU YANG BARU DI-DEPLOY!
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as `0x${string}`; 
@@ -111,6 +112,7 @@ export default function CreateTokenForm() {
       abi: FactoryJSON.abi,
       functionName: 'createToken', 
       args: [coinName, coinTicker, description, metadataUrl], 
+      value: parseEther('0.01')
     });
   };
 
